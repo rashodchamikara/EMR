@@ -1,35 +1,38 @@
-import { Controller, Get } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
-
-interface HealthResponse {
-  status: 'ok' | 'degraded';
-  service: string;
-  database: 'connected' | 'disconnected';
-  timestamp: string;
-}
-
+import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import {
+  ApiOkResponse,
+  ApiServiceUnavailableResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { PrismaService } from '../database/prisma.service';
+@ApiTags('Health')
 @Controller('health')
 export class HealthController {
-  constructor(private readonly databaseService: DatabaseService) {}
-
+  constructor(private readonly prisma: PrismaService) {}
   @Get()
-  async check(): Promise<HealthResponse> {
+  @ApiOkResponse({ description: 'The API and database are available.' })
+  @ApiServiceUnavailableResponse({
+    description: 'The API is running, but the database is unavailable.',
+  })
+  async check(): Promise<{
+    status: 'ok';
+    service: string;
+    database: 'connected';
+    timestamp: string;
+  }> {
     try {
-      const databaseConnected = await this.databaseService.ping();
-
+      await this.prisma.$queryRaw`SELECT 1`;
       return {
-        status: databaseConnected ? 'ok' : 'degraded',
+        status: 'ok',
         service: 'emr-api',
-        database: databaseConnected ? 'connected' : 'disconnected',
+        database: 'connected',
         timestamp: new Date().toISOString(),
       };
     } catch {
-      return {
-        status: 'degraded',
+      throw new ServiceUnavailableException({
         service: 'emr-api',
         database: 'disconnected',
-        timestamp: new Date().toISOString(),
-      };
+      });
     }
   }
 }
