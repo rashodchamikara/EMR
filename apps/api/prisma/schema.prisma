@@ -43,8 +43,189 @@ model Organization {
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
 
+  memberships OrganizationMembership[]
+
   @@index([name])
   @@index([status])
   @@index([type])
   @@map("organizations")
+}
+
+model User {
+  id              String @id @default(uuid()) @db.Char(36)
+  email           String @db.VarChar(254)
+  emailNormalized String @unique @map("email_normalized") @db.VarChar(254)
+  passwordHash    String @map("password_hash") @db.VarChar(255)
+
+  firstName           String                   @map("first_name") @db.VarChar(100)
+  lastName            String                   @map("last_name") @db.VarChar(100)
+  status              UserStatus               @default(ACTIVE)
+  failedLoginAttempts Int                      @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime?                @map("locked_until")
+  lastLoginAt         DateTime?                @map("last_login_at")
+  passwordChangedAt   DateTime                 @default(now()) @map("password_changed_at")
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+  systemRoles         UserSystemRole[]
+  memberships         OrganizationMembership[]
+  sessions            UserSession[]
+  securityEvents      SecurityEvent[]
+
+  @@index([status])
+  @@index([lastName, firstName])
+  @@map("users")
+}
+
+model Role {
+  id              String           @id @default(uuid()) @db.Char(36)
+  code            String           @unique @db.VarChar(80)
+  name            String           @db.VarChar(120)
+  description     String?          @db.VarChar(500)
+  scope           RoleScope
+  isSystem        Boolean          @default(true) @map("is_system")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  permissions     RolePermission[]
+  systemUsers     UserSystemRole[]
+  membershipRoles MembershipRole[]
+
+  @@index([scope])
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(uuid()) @db.Char(36)
+  code        String           @unique @db.VarChar(120)
+  name        String           @db.VarChar(150)
+  description String?          @db.VarChar(500)
+  createdAt   DateTime         @default(now()) @map("created_at")
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String     @map("role_id") @db.Char(36)
+  permissionId String     @map("permission_id") @db.Char(36)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserSystemRole {
+  userId    String   @map("user_id") @db.Char(36)
+  roleId    String   @map("role_id") @db.Char(36)
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_system_roles")
+}
+
+model OrganizationMembership {
+  id             String           @id @default(uuid()) @db.Char(36)
+  userId         String           @map("user_id") @db.Char(36)
+  organizationId String           @map("organization_id") @db.Char(36)
+  status         MembershipStatus @default(ACTIVE)
+  jobTitle       String?          @map("job_title") @db.VarChar(150)
+  isPrimary      Boolean          @default(false) @map("is_primary")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  roles          MembershipRole[]
+
+  @@unique([userId, organizationId])
+  @@index([organizationId, status])
+  @@map("organization_memberships")
+}
+
+model MembershipRole {
+  membershipId String                 @map("membership_id") @db.Char(36)
+  roleId       String                 @map("role_id") @db.Char(36)
+  createdAt    DateTime               @default(now()) @map("created_at")
+  membership   OrganizationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  role         Role                   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([membershipId, roleId])
+  @@map("membership_roles")
+}
+
+model UserSession {
+  id            String         @id @default(uuid()) @db.Char(36)
+  userId        String         @map("user_id") @db.Char(36)
+  expiresAt     DateTime       @map("expires_at")
+  revokedAt     DateTime?      @map("revoked_at")
+  lastSeenAt    DateTime       @default(now()) @map("last_seen_at")
+  ipAddress     String?        @map("ip_address") @db.VarChar(45)
+  userAgent     String?        @map("user_agent") @db.VarChar(500)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("user_sessions")
+}
+
+model RefreshToken {
+  id        String      @id @db.Char(36)
+  sessionId String      @map("session_id") @db.Char(36)
+  tokenHash String      @map("token_hash") @db.Char(64)
+  expiresAt DateTime    @map("expires_at")
+  usedAt    DateTime?   @map("used_at")
+  revokedAt DateTime?   @map("revoked_at")
+  createdAt DateTime    @default(now()) @map("created_at")
+  session   UserSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model SecurityEvent {
+  id        String            @id @default(uuid()) @db.Char(36)
+  userId    String?           @map("user_id") @db.Char(36)
+  eventType SecurityEventType @map("event_type")
+  ipAddress String?           @map("ip_address") @db.VarChar(45)
+  userAgent String?           @map("user_agent") @db.VarChar(500)
+  details   Json?
+  createdAt DateTime          @default(now()) @map("created_at")
+  user      User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([eventType, createdAt])
+  @@map("security_events")
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+enum RoleScope {
+  SYSTEM
+  ORGANIZATION
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+enum SecurityEventType {
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  ACCOUNT_TEMPORARILY_LOCKED
+  TOKEN_REFRESHED
+  TOKEN_REUSE_DETECTED
+  LOGOUT
+  SESSION_REVOKED
 }

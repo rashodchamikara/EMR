@@ -1,14 +1,16 @@
 import { Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { NextFunction, Request, Response } from 'express';
+import type { AuthenticatedUser } from '../../modules/auth/auth.types';
 export interface RequestWithContext extends Request {
   requestId: string;
+  user?: AuthenticatedUser;
 }
 const httpLogger = new Logger('HTTP'); 
 function isValidRequestId(value: string): boolean {
   return /^[A-Za-z0-9._-]{1,100}$/.test(value);
 }
-export function requestContextMiddleware( 
+export function requestContextMiddleware(
   request: Request,
   response: Response,
   next: NextFunction,

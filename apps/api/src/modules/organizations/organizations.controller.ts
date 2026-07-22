@@ -24,11 +24,15 @@ import {
 import { QueryOrganizationsDto } from './dto/query-organizations.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { OrganizationsService } from './organizations.service';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { RequirePermissions, } from '../auth/decorators/require-permissions.decorator';
 @ApiTags('Organizations')
+@ApiBearerAuth()
 @Controller('organizations')
 export class OrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService) {}
   @Post()
+  @RequirePermissions('organizations.create')
   @ApiOperation({ summary: 'Create an organization' })
   @ApiCreatedResponse({ type: OrganizationResponseDto })
   @ApiConflictResponse({ description: 'The organization code already exists.' })
@@ -36,6 +40,7 @@ export class OrganizationsController {
     return this.organizationsService.create(dto);
   }
   @Get()
+  @RequirePermissions('organizations.read')
   @ApiOperation({ summary: 'List organizations' })
   @ApiOkResponse({ type: OrganizationListResponseDto })
   findAll(
@@ -44,6 +49,7 @@ export class OrganizationsController {
     return this.organizationsService.findAll(query);
   }
   @Get(':id')
+  @RequirePermissions('organizations.read')
   @ApiOperation({ summary: 'Get one organization' })
   @ApiOkResponse({ type: OrganizationResponseDto })
   @ApiNotFoundResponse({ description: 'Organization not found.' })
@@ -53,6 +59,7 @@ export class OrganizationsController {
     return this.organizationsService.findOne(id);
   }
   @Patch(':id')
+  @RequirePermissions('organizations.update')
   @ApiOperation({ summary: 'Update an organization' })
   @ApiOkResponse({ type: OrganizationResponseDto })
   @ApiNotFoundResponse({ description: 'Organization not found.' })

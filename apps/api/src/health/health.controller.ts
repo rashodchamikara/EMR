@@ -5,6 +5,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { PrismaService } from '../database/prisma.service';
+import { Public } from '../modules/auth/decorators/public.decorator';
+
+@Public()
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {

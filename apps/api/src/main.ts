@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { requestContextMiddleware } from './common/middleware/request-context.middleware';
+import cookieParser from 'cookie-parser';
 async function bootstrap(): Promise<void> {
   const isProduction = process.env.NODE_ENV === 'production';
   const app = await NestFactory.create(AppModule, {
@@ -22,6 +23,7 @@ async function bootstrap(): Promise<void> {
   const appName = configService.getOrThrow<string>('app.name');
   const appVersion = configService.getOrThrow<string>('app.version');
   app.use(helmet());
+  app.use(cookieParser());
   app.use(requestContextMiddleware);
   app.setGlobalPrefix(apiPrefix);
   app.enableCors({ origin: corsOrigins, credentials: true });
