@@ -6,7 +6,7 @@ export interface RequestWithContext extends Request {
   requestId: string;
   user?: AuthenticatedUser;
 }
-const httpLogger = new Logger('HTTP'); 
+const httpLogger = new Logger('HTTP');
 function isValidRequestId(value: string): boolean {
   return /^[A-Za-z0-9._-]{1,100}$/.test(value);
 }

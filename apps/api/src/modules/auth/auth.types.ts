@@ -5,6 +5,7 @@ export interface AuthenticatedUser {
   firstName: string;
   lastName: string;
   organizationId: string | null;
+  organizationName: string | null;
   roles: string[];
   permissions: string[];
 }
@@ -16,6 +17,7 @@ export interface AccessTokenPayload {
   firstName: string;
   lastName: string;
   organizationId: string | null;
+  organizationName: string | null;
   roles: string[];
   permissions: string[];
   iat?: number;

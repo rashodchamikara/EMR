@@ -1,14 +1,14 @@
-import { useAuth } 
-from '../auth/AuthContext'; 
-export function DashboardPage() { 
-    const auth = useAuth(); 
-    
-    return ( 
-    <main className="dashboard-page"> 
-        <header className="app-header"> 
-            <div> <p className="eyebrow"> EMR Platform </p> 
-                <h1> Development dashboard </h1> 
-            </div> <div className="user-menu"> 
+import { useAuth } from '../auth/useAuth';
+
+export function DashboardPage() {
+    const auth = useAuth();
+
+    return (
+        <main className="dashboard-page">
+            <header className="app-header">
+                <div> <p className="eyebrow"> EMR Platform </p>
+                    <h1> Development dashboard </h1>
+                </div> <div className="user-menu">
                 <div> 
                     <strong> {auth.user?.firstName}{' '} {auth.user?.lastName} </strong> 
                     <span> {auth.user?.email} </span> 

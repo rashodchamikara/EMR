@@ -43,7 +43,9 @@ model Organization {
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
 
-  memberships OrganizationMembership[]
+  memberships    OrganizationMembership[]
+  facilities     Facility[]
+  activeSessions UserSession[]            @relation("ActiveSessionOrganization")
 
   @@index([name])
   @@index([status])
@@ -155,19 +157,25 @@ model MembershipRole {
 }
 
 model UserSession {
-  id            String         @id @default(uuid()) @db.Char(36)
-  userId        String         @map("user_id") @db.Char(36)
-  expiresAt     DateTime       @map("expires_at")
-  revokedAt     DateTime?      @map("revoked_at")
-  lastSeenAt    DateTime       @default(now()) @map("last_seen_at")
-  ipAddress     String?        @map("ip_address") @db.VarChar(45)
-  userAgent     String?        @map("user_agent") @db.VarChar(500)
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String    @id @default(uuid()) @db.Char(36)
+  userId     String    @map("user_id") @db.Char(36)
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at")
+  ipAddress  String?   @map("ip_address") @db.VarChar(45)
+  userAgent  String?   @map("user_agent") @db.VarChar(500)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  activeOrganizationId String?
+
+  activeOrganization Organization? @relation("ActiveSessionOrganization", fields: [activeOrganizationId], references: [id], onDelete: SetNull)
+
   refreshTokens RefreshToken[]
 
   @@index([userId, revokedAt])
+  @@index([activeOrganizationId])
   @@index([expiresAt])
   @@map("user_sessions")
 }
@@ -202,6 +210,33 @@ model SecurityEvent {
   @@map("security_events")
 }
 
+model Facility {
+  id             String         @id @default(uuid()) @db.Char(36)
+  organizationId String         @map("organization_id") @db.Char(36)
+  code           String         @db.VarChar(30)
+  name           String         @db.VarChar(150)
+  legalName      String?        @map("legal_name") @db.VarChar(200)
+  type           FacilityType   @default(CLINIC)
+  status         FacilityStatus @default(ACTIVE)
+  timezone       String         @default("Asia/Colombo") @db.VarChar(50)
+  phone          String?        @db.VarChar(30)
+  email          String?        @db.VarChar(254)
+  addressLine1   String?        @map("address_line_1") @db.VarChar(200)
+  addressLine2   String?        @map("address_line_2") @db.VarChar(200)
+  city           String?        @db.VarChar(100)
+  stateProvince  String?        @map("state_province") @db.VarChar(100)
+  postalCode     String?        @map("postal_code") @db.VarChar(20)
+  countryCode    String         @default("LK") @map("country_code") @db.Char(2)
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, code])
+  @@index([organizationId, status])
+  @@index([organizationId, name])
+  @@map("facilities")
+}
+
 enum UserStatus {
   INVITED
   ACTIVE
@@ -228,4 +263,20 @@ enum SecurityEventType {
   TOKEN_REUSE_DETECTED
   LOGOUT
   SESSION_REVOKED
+}
+
+enum FacilityType {
+  HOSPITAL
+  CLINIC
+  LABORATORY
+  PHARMACY
+  DIAGNOSTIC_CENTER
+  ADMINISTRATIVE
+  OTHER
+}
+
+enum FacilityStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
 }

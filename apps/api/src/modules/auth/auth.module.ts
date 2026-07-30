@@ -9,6 +9,7 @@ import { PermissionsGuard } from './guards/permissions.guard';
 import { TrustedOriginGuard } from './guards/trusted-origin.guard';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
+import { OrganizationContextGuard } from './guards/organization-context.guard';
 @Module({
   imports: [JwtModule.register({})],
   controllers: [AuthController],
@@ -18,9 +19,10 @@ import { TokenService } from './token.service';
     PasswordService,
     TokenService,
     TrustedOriginGuard,
+    OrganizationContextGuard,
     { provide: APP_GUARD, useClass: AccessTokenGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
-  exports: [AuthRepository, PasswordService],
+  exports: [AuthRepository, PasswordService, OrganizationContextGuard],
 })
 export class AuthModule {}

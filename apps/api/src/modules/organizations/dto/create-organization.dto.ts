@@ -10,16 +10,16 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrganizationType } from '../../../generated/prisma/client';
+import {
+  trimString,
+  trimUppercaseString,
+} from '../../../common/validation/string-transformers';
 export class CreateOrganizationDto {
   @ApiProperty({
     example: 'DEMO_CLINIC',
     description: 'Unique administrative organization code.',
   })
-  @Transform(({ value }) =>
-    typeof value === 'string' 
-  ? value.trim().toUpperCase() 
-  : value,
-  )
+  @Transform(({ value }) => trimUppercaseString({ value }))
   @IsString()
   @Length(2, 30)
   @Matches(/^[A-Z0-9_-]+$/, {
@@ -28,20 +28,12 @@ export class CreateOrganizationDto {
   })
   code!: string;
   @ApiProperty({ example: 'Demo Medical Centre' })
-  @Transform(({ value }) => (
-    typeof value === 'string' 
-    ? value.trim() 
-    : value
-   ))
+  @Transform(({ value }) => trimString({ value }))
   @IsString()
   @Length(2, 150)
   name!: string;
   @ApiPropertyOptional({ example: 'Demo Medical Centre Private Limited' })
-  @Transform(({ value }) => (
-    typeof value === 'string' 
-    ? value.trim() 
-    : value
-))
+  @Transform(({ value }) => trimString({ value }))
   @IsOptional()
   @IsString()
   @MaxLength(200)
@@ -101,11 +93,7 @@ export class CreateOrganizationDto {
   @MaxLength(20)
   postalCode?: string;
   @ApiPropertyOptional({ example: 'LK', default: 'LK' })
-  @Transform(({ value }) =>
-    typeof value === 'string' 
-  ? value.trim().toUpperCase() 
-  : value,
-  )
+  @Transform(({ value }) => trimUppercaseString({ value }))
   @IsOptional()
   @IsString()
   @Length(2, 2)

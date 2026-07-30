@@ -34,6 +34,8 @@ export class TokenService {
 
       organizationId: user.organizationId,
 
+      organizationName: user.organizationName,
+
       roles: user.roles,
       permissions: user.permissions,
     };

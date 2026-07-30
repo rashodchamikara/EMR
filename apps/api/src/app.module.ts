@@ -10,6 +10,7 @@ import authConfig from './config/auth.config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './modules/auth/auth.module';
+import { FacilitiesModule } from './modules/facilities/facilities.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -24,6 +25,7 @@ import { AuthModule } from './modules/auth/auth.module';
     AuthModule,
     HealthModule,
     OrganizationsModule,
+    FacilitiesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

@@ -24,6 +24,7 @@ import { Public } from './decorators/public.decorator';
 import { Throttle } from '@nestjs/throttler';
 import { LoginDto } from './dto/login.dto';
 import { TrustedOriginGuard } from './guards/trusted-origin.guard';
+import { SwitchOrganizationDto } from './dto/switch-organization.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -39,12 +40,10 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
-    description:
-      'Login completed successfully.',
+    description: 'Login completed successfully.',
   })
   @ApiUnauthorizedResponse({
-    description:
-      'Invalid login credentials.',
+    description: 'Invalid login credentials.',
   })
   async login(
     @Body() dto: LoginDto,
@@ -56,23 +55,14 @@ export class AuthController {
     })
     response: Response,
   ) {
-    const result =
-      await this.authService.login(
-        dto,
-        this.getMetadata(request),
-      );
+    const result = await this.authService.login(dto, this.getMetadata(request));
 
-    this.setRefreshCookie(
-      response,
-      result.refreshToken,
-    );
+    this.setRefreshCookie(response, result.refreshToken);
 
     return {
-      accessToken:
-        result.accessToken,
+      accessToken: result.accessToken,
 
-      expiresIn:
-        result.expiresIn,
+      expiresIn: result.expiresIn,
 
       user: result.user,
     };
@@ -90,29 +80,21 @@ export class AuthController {
     })
     response: Response,
   ) {
-    const cookieName =
-      this.config.getOrThrow<string>(
-        'auth.refreshCookieName',
-      );
+    const cookieName = this.config.getOrThrow<string>('auth.refreshCookieName');
 
-    const result =
-      await this.authService.refresh(
-        request.cookies?.[cookieName],
+    const refreshToken = readCookie(request, cookieName);
 
-        this.getMetadata(request),
-      );
-
-    this.setRefreshCookie(
-      response,
-      result.refreshToken,
+    const result = await this.authService.refresh(
+      refreshToken,
+      this.getMetadata(request),
     );
 
-    return {
-      accessToken:
-        result.accessToken,
+    this.setRefreshCookie(response, result.refreshToken);
 
-      expiresIn:
-        result.expiresIn,
+    return {
+      accessToken: result.accessToken,
+
+      expiresIn: result.expiresIn,
 
       user: result.user,
     };
@@ -124,34 +106,24 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(
     @Req() request: Request,
-
     @Res({
       passthrough: true,
     })
     response: Response,
   ): Promise<void> {
-    const cookieName =
-      this.config.getOrThrow<string>(
-        'auth.refreshCookieName',
-      );
+    const cookieName = this.config.getOrThrow<string>('auth.refreshCookieName');
 
-    await this.authService.logout(
-      request.cookies?.[cookieName],
+    const refreshToken = readCookie(request, cookieName);
 
-      this.getMetadata(request),
-    );
+    await this.authService.logout(refreshToken, this.getMetadata(request));
 
-    response.clearCookie(
-      cookieName,
-      this.cookieOptions(),
-    );
+    response.clearCookie(cookieName, this.cookieOptions());
   }
 
   @Get('me')
   @ApiBearerAuth()
   @ApiOkResponse({
-    description:
-      'Current authenticated user.',
+    description: 'Current authenticated user.',
   })
   me(
     @CurrentUser()
@@ -160,63 +132,67 @@ export class AuthController {
     return user;
   }
 
-  private setRefreshCookie(
-    response: Response,
-    refreshToken: string,
-  ): void {
-    const cookieName =
-      this.config.getOrThrow<string>(
-        'auth.refreshCookieName',
-      );
+  private setRefreshCookie(response: Response, refreshToken: string): void {
+    const cookieName = this.config.getOrThrow<string>('auth.refreshCookieName');
 
-    const numberOfDays =
-      this.config.getOrThrow<number>(
-        'auth.sessionTtlDays',
-      );
+    const numberOfDays = this.config.getOrThrow<number>('auth.sessionTtlDays');
 
-    response.cookie(
-      cookieName,
-      refreshToken,
-      {
-        ...this.cookieOptions(),
+    response.cookie(cookieName, refreshToken, {
+      ...this.cookieOptions(),
 
-        maxAge:
-          numberOfDays *
-          24 *
-          60 *
-          60 *
-          1000,
-      },
-    );
+      maxAge: numberOfDays * 24 * 60 * 60 * 1000,
+    });
   }
 
   private cookieOptions() {
     return {
       httpOnly: true,
 
-      secure:
-        this.config.getOrThrow<boolean>(
-          'auth.cookieSecure',
-        ),
+      secure: this.config.getOrThrow<boolean>('auth.cookieSecure'),
 
-      sameSite:
-        'strict' as const,
+      sameSite: 'strict' as const,
 
       path: '/api/v1/auth',
     };
   }
 
-  private getMetadata(
-    request: Request,
-  ): RequestMetadata {
+  private getMetadata(request: Request): RequestMetadata {
     return {
-      ipAddress:
-        request.ip ?? null,
+      ipAddress: request.ip ?? null,
 
-      userAgent:
-        request.header(
-          'user-agent',
-        ) ?? null,
+      userAgent: request.header('user-agent') ?? null,
     };
   }
+  @Get('organizations')
+  @ApiBearerAuth()
+  @ApiOkResponse({
+    description: 'Organizations available to the current user.',
+  })
+  findAvailableOrganizations(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.findAvailableOrganizations(user);
+  }
+  @Post('switch-organization')
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'The active organization was changed.' })
+  switchOrganization(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SwitchOrganizationDto,
+  ) {
+    return this.authService.switchOrganization(user, dto.organizationId);
+  }
+}
+function isUnknownRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function readCookie(request: Request, cookieName: string): string | undefined {
+  const cookies: unknown = request.cookies;
+
+  if (!isUnknownRecord(cookies)) {
+    return undefined;
+  }
+
+  const cookieValue = cookies[cookieName];
+
+  return typeof cookieValue === 'string' ? cookieValue : undefined;
 }

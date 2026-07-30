@@ -51,3 +51,23 @@ const apiBaseUrl =
     export async function restoreSession(): Promise<AuthResponse | null> { 
         try { return await refreshAccessToken(); } catch { setAccessToken(null); return null; } 
     }
+    export async function apiJson<T>( path: string, options: RequestInit = {}, ): Promise<T> { 
+        const response = await apiFetch( path, options, ); 
+        if (!response.ok) { const contentType = response.headers.get( 'content-type', ); 
+            if ( contentType?.includes( 'application/json', ) ) { 
+                const result = (await response.json()) as { 
+                    message?: string | string[]; 
+                }; 
+                const message = Array.isArray(result.message) ? result.message.join(', ') : result.message ?? `Request failed with HTTP ${response.status}.`; 
+                throw new Error(message); 
+            } 
+            throw new Error( `Request failed with HTTP ${response.status}.`, ); 
+        } 
+        if (response.status === 204) { return undefined as T; } 
+        return response.json() as Promise<T>; 
+    }
+    export async function switchOrganizationRequest( organizationId: string, ): Promise<AuthResponse> { 
+        const result = await apiJson<AuthResponse>( '/auth/switch-organization', { method: 'POST', body: JSON.stringify({ organizationId, }), }, ); 
+        setAccessToken( result.accessToken, ); 
+        return result; 
+    }

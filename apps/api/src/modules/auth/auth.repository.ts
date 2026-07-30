@@ -110,6 +110,7 @@ export class AuthRepository {
   }
   async createSession(
     userId: string,
+    activeOrganizationId: string | null,
     sessionExpiresAt: Date,
     refreshToken: { id: string; tokenHash: string; expiresAt: Date },
     metadata: RequestMetadata,
@@ -120,6 +121,7 @@ export class AuthRepository {
         expiresAt: sessionExpiresAt,
         ipAddress: metadata.ipAddress,
         userAgent: metadata.userAgent,
+        activeOrganizationId,
         refreshTokens: {
           create: {
             id: refreshToken.id,
@@ -220,5 +222,62 @@ export class AuthRepository {
         },
       }),
     ]);
+  }
+
+  findOrganization(organizationId: string) {
+    return this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { id: true, name: true, status: true },
+    });
+  }
+  async findAvailableOrganizations(
+    userId: string,
+    isSystemAdministrator: boolean,
+  ) {
+    if (isSystemAdministrator) {
+      return this.prisma.organization.findMany({
+        where: { status: 'ACTIVE' },
+        select: { id: true, code: true, name: true, type: true, status: true },
+        orderBy: { name: 'asc' },
+      });
+    }
+    const memberships = await this.prisma.organizationMembership.findMany({
+      where: {
+        userId,
+        status: MembershipStatus.ACTIVE,
+        organization: { status: 'ACTIVE' },
+      },
+      select: {
+        isPrimary: true,
+        organization: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            type: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: [{ isPrimary: 'desc' }, { organization: { name: 'asc' } }],
+    });
+    return memberships.map((membership) => membership.organization);
+  }
+  async updateActiveOrganization(
+    sessionId: string,
+    organizationId: string | null,
+  ): Promise<void> {
+    await this.prisma.userSession.update({
+      where: { id: sessionId },
+      data: { activeOrganizationId: organizationId, lastSeenAt: new Date() },
+    });
+  }
+  async findSession(sessionId: string) {
+    return this.prisma.userSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        activeOrganization: { select: { id: true, name: true, status: true } },
+      },
+    });
   }
 }

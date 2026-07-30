@@ -1,64 +1,48 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
+  type ReactNode,
 } from 'react';
 import {
   loginRequest,
   logoutRequest,
   restoreSession,
-} from './api/api-client';
-import type {
-  AuthenticatedUser,
-  LoginInput,
-} from './auth.types';
+  switchOrganizationRequest,
+} from '../api/api-client';
+import type { LoginInput } from './auth.types';
+import {
+  AuthContext,
+  type AuthContextValue,
+} from './auth-context';
 
-interface AuthContextValue {
-  user: AuthenticatedUser | null;
-  initializing: boolean;
-  authenticated: boolean;
-
-  login(
-    input: LoginInput,
-  ): Promise<void>;
-
-  logout(): Promise<void>;
+interface AuthProviderProps {
+  children: ReactNode;
 }
-
-const AuthContext =
-  createContext<
-    AuthContextValue | undefined
-  >(undefined);
 
 export function AuthProvider({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: AuthProviderProps) {
   const [user, setUser] =
-    useState<AuthenticatedUser | null>(
-      null,
-    );
+    useState<AuthContextValue['user']>(null);
 
-  const [
-    initializing,
-    setInitializing,
-  ] = useState(true);
+  const [initializing, setInitializing] =
+    useState(true);
 
   useEffect(() => {
     const initialize =
       async (): Promise<void> => {
-        const session =
-          await restoreSession();
+        try {
+          const session =
+            await restoreSession();
 
-        setUser(
-          session?.user ?? null,
-        );
-
-        setInitializing(false);
+          setUser(session?.user ?? null);
+        } catch {
+          setUser(null);
+        } finally {
+          setInitializing(false);
+        }
       };
 
     void initialize();
@@ -68,11 +52,10 @@ export function AuthProvider({
     async (
       input: LoginInput,
     ): Promise<void> => {
-      const result =
-        await loginRequest(
-          input.email,
-          input.password,
-        );
+      const result = await loginRequest(
+        input.email,
+        input.password,
+      );
 
       setUser(result.user);
     },
@@ -82,47 +65,47 @@ export function AuthProvider({
   const logout = useCallback(
     async (): Promise<void> => {
       await logoutRequest();
+
       setUser(null);
     },
     [],
   );
 
-  const value = useMemo(
+  const switchOrganization = useCallback(
+    async (
+      organizationId: string,
+    ): Promise<void> => {
+      const result =
+        await switchOrganizationRequest(
+          organizationId,
+        );
+
+      setUser(result.user);
+    },
+    [],
+  );
+
+  const value = useMemo<AuthContextValue>(
     () => ({
       user,
       initializing,
-      authenticated:
-        Boolean(user),
+      authenticated: Boolean(user),
       login,
       logout,
+      switchOrganization,
     }),
     [
       user,
       initializing,
       login,
       logout,
+      switchOrganization,
     ],
   );
 
   return (
-    <AuthContext.Provider
-      value={value}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth():
-  AuthContextValue {
-  const context =
-    useContext(AuthContext);
-
-  if (!context) {
-    throw new Error(
-      'useAuth must be used inside AuthProvider.',
-    );
-  }
-
-  return context;
 }

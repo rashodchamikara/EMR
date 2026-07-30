@@ -25,7 +25,7 @@ import { QueryOrganizationsDto } from './dto/query-organizations.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { OrganizationsService } from './organizations.service';
 import { ApiBearerAuth } from '@nestjs/swagger';
-import { RequirePermissions, } from '../auth/decorators/require-permissions.decorator';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 @ApiTags('Organizations')
 @ApiBearerAuth()
 @Controller('organizations')

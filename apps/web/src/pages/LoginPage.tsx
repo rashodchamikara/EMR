@@ -1,14 +1,13 @@
-LoginPage.tsx
 import {
-  FormEvent,
   useState,
+  type FormEvent,
 } from 'react';
 import {
   Navigate,
   useLocation,
   useNavigate,
 } from 'react-router';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 
 export function LoginPage() {
   const auth = useAuth();

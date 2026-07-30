@@ -26,6 +26,22 @@ const permissions = [
   { code: 'roles.assign', name: 'Assign roles' },
   { code: 'sessions.read', name: 'View login sessions' },
   { code: 'sessions.revoke', name: 'Revoke login sessions' },
+  { code: 'facilities.read', name: 'View facilities' },
+  { code: 'facilities.create', name: 'Create facilities' },
+  { code: 'facilities.update', name: 'Update facilities' },
+  { code: 'departments.read', name: 'View departments' },
+  { code: 'departments.create', name: 'Create departments' },
+  { code: 'departments.update', name: 'Update departments' },
+  { code: 'rooms.read', name: 'View rooms' },
+  { code: 'rooms.create', name: 'Create rooms' },
+  { code: 'rooms.update', name: 'Update rooms' },
+  { code: 'staff.read', name: 'View staff' },
+  { code: 'staff.create', name: 'Create staff' },
+  { code: 'staff.update', name: 'Update staff' },
+  { code: 'roles.assign', name: 'Assign roles' },
+  { code: 'practitioners.read', name: 'View practitioners' },
+  { code: 'practitioners.create', name: 'Create practitioners' },
+  { code: 'practitioners.update', name: 'Update practitioners' },
 ];
 const roles = [
   {
@@ -130,6 +146,7 @@ async function main(): Promise<void> {
   await seedRoles();
   await assignSystemAdminPermissions();
   await seedSystemAdministrator();
+  await assignOrganizationAdminPermissions();
   console.log('Authentication seed completed.');
 }
 main()
@@ -140,3 +157,69 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+  async function assignOrganizationAdminPermissions(): Promise<void> {
+  const organizationAdminRole =
+    await prisma.role.findUniqueOrThrow({
+      where: {
+        code: 'ORG_ADMIN',
+      },
+    });
+
+  const permissionCodes = [
+    'organizations.read',
+    'organizations.update',
+
+    'facilities.read',
+    'facilities.create',
+    'facilities.update',
+
+    'departments.read',
+    'departments.create',
+    'departments.update',
+
+    'rooms.read',
+    'rooms.create',
+    'rooms.update',
+
+    'staff.read',
+    'staff.create',
+    'staff.update',
+
+    'roles.read',
+    'roles.assign',
+
+    'practitioners.read',
+    'practitioners.create',
+    'practitioners.update',
+
+    'sessions.read',
+    'sessions.revoke',
+  ];
+
+  const organizationPermissions = await prisma.permission.findMany({
+    where: {
+      code: {
+        in: permissionCodes,
+      },
+    },
+  });
+
+  for (const permission of organizationPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: organizationAdminRole.id,
+          permissionId: permission.id,
+        },
+      },
+
+      update: {},
+
+      create: {
+        roleId: organizationAdminRole.id,
+        permissionId: permission.id,
+      },
+    });
+  }
+}
