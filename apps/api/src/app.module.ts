@@ -11,6 +11,11 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './modules/auth/auth.module';
 import { FacilitiesModule } from './modules/facilities/facilities.module';
+import { DepartmentsModule } from './modules/departments/departments.module';
+import { RoomsModule } from './modules/rooms/rooms.module';
+import { StaffModule } from './modules/staff/staff.module';
+import { PractitionersModule } from './modules/practitioners/practitioners.module';
+import { PatientsModule } from './modules/patients/patients.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +31,11 @@ import { FacilitiesModule } from './modules/facilities/facilities.module';
     HealthModule,
     OrganizationsModule,
     FacilitiesModule,
+    DepartmentsModule,
+    RoomsModule,
+    StaffModule,
+    PractitionersModule,
+    PatientsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

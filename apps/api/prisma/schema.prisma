@@ -8,44 +8,36 @@ datasource db {
   provider = "mysql"
 }
 
-enum OrganizationType {
-  CLINIC
-  HOSPITAL
-  LABORATORY
-  PHARMACY
-  DIAGNOSTIC_CENTER
-  OTHER
-}
-
-enum OrganizationStatus {
-  ACTIVE
-  INACTIVE
-  SUSPENDED
-}
-
 model Organization {
-  id            String             @id @default(uuid()) @db.Char(36)
-  code          String             @unique @db.VarChar(30)
-  name          String             @db.VarChar(150)
-  legalName     String?            @map("legal_name") @db.VarChar(200)
-  type          OrganizationType   @default(CLINIC)
-  status        OrganizationStatus @default(ACTIVE)
-  timezone      String             @default("Asia/Colombo") @db.VarChar(50)
-  locale        String             @default("en-LK") @db.VarChar(20)
-  phone         String?            @db.VarChar(30)
-  email         String?            @db.VarChar(254)
-  addressLine1  String?            @map("address_line_1") @db.VarChar(200)
-  addressLine2  String?            @map("address_line_2") @db.VarChar(200)
-  city          String?            @db.VarChar(100)
-  stateProvince String?            @map("state_province") @db.VarChar(100)
-  postalCode    String?            @map("postal_code") @db.VarChar(20)
-  countryCode   String             @default("LK") @map("country_code") @db.Char(2)
-  createdAt     DateTime           @default(now()) @map("created_at")
-  updatedAt     DateTime           @updatedAt @map("updated_at")
-
-  memberships    OrganizationMembership[]
-  facilities     Facility[]
-  activeSessions UserSession[]            @relation("ActiveSessionOrganization")
+  id                       String                    @id @default(uuid()) @db.Char(36)
+  code                     String                    @unique @db.VarChar(30)
+  name                     String                    @db.VarChar(150)
+  legalName                String?                   @map("legal_name") @db.VarChar(200)
+  type                     OrganizationType          @default(CLINIC)
+  status                   OrganizationStatus        @default(ACTIVE)
+  timezone                 String                    @default("Asia/Colombo") @db.VarChar(50)
+  locale                   String                    @default("en-LK") @db.VarChar(20)
+  phone                    String?                   @db.VarChar(30)
+  email                    String?                   @db.VarChar(254)
+  addressLine1             String?                   @map("address_line_1") @db.VarChar(200)
+  addressLine2             String?                   @map("address_line_2") @db.VarChar(200)
+  city                     String?                   @db.VarChar(100)
+  stateProvince            String?                   @map("state_province") @db.VarChar(100)
+  postalCode               String?                   @map("postal_code") @db.VarChar(20)
+  countryCode              String                    @default("LK") @map("country_code") @db.Char(2)
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  updatedAt                DateTime                  @updatedAt @map("updated_at")
+  patients                 Patient[]
+  patientFacilities        PatientFacility[]
+  patientEmergencyContacts PatientEmergencyContact[]
+  patientNumberSequence    PatientNumberSequence?
+  departments              Department[]
+  facilities               Facility[]
+  memberships              OrganizationMembership[]
+  practitioners            Practitioner[]
+  rooms                    Room[]
+  staffFacilityAssignments StaffFacilityAssignment[]
+  activeSessions           UserSession[]             @relation("ActiveSessionOrganization")
 
   @@index([name])
   @@index([status])
@@ -54,11 +46,10 @@ model Organization {
 }
 
 model User {
-  id              String @id @default(uuid()) @db.Char(36)
-  email           String @db.VarChar(254)
-  emailNormalized String @unique @map("email_normalized") @db.VarChar(254)
-  passwordHash    String @map("password_hash") @db.VarChar(255)
-
+  id                  String                   @id @default(uuid()) @db.Char(36)
+  email               String                   @db.VarChar(254)
+  emailNormalized     String                   @unique @map("email_normalized") @db.VarChar(254)
+  passwordHash        String                   @map("password_hash") @db.VarChar(255)
   firstName           String                   @map("first_name") @db.VarChar(100)
   lastName            String                   @map("last_name") @db.VarChar(100)
   status              UserStatus               @default(ACTIVE)
@@ -68,10 +59,10 @@ model User {
   passwordChangedAt   DateTime                 @default(now()) @map("password_changed_at")
   createdAt           DateTime                 @default(now()) @map("created_at")
   updatedAt           DateTime                 @updatedAt @map("updated_at")
-  systemRoles         UserSystemRole[]
   memberships         OrganizationMembership[]
-  sessions            UserSession[]
   securityEvents      SecurityEvent[]
+  sessions            UserSession[]
+  systemRoles         UserSystemRole[]
 
   @@index([status])
   @@index([lastName, firstName])
@@ -87,9 +78,9 @@ model Role {
   isSystem        Boolean          @default(true) @map("is_system")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
+  membershipRoles MembershipRole[]
   permissions     RolePermission[]
   systemUsers     UserSystemRole[]
-  membershipRoles MembershipRole[]
 
   @@index([scope])
   @@map("roles")
@@ -109,10 +100,11 @@ model Permission {
 model RolePermission {
   roleId       String     @map("role_id") @db.Char(36)
   permissionId String     @map("permission_id") @db.Char(36)
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
+  @@index([permissionId], map: "role_permissions_permission_id_fkey")
   @@map("role_permissions")
 }
 
@@ -120,25 +112,28 @@ model UserSystemRole {
   userId    String   @map("user_id") @db.Char(36)
   roleId    String   @map("role_id") @db.Char(36)
   createdAt DateTime @default(now()) @map("created_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, roleId])
+  @@index([roleId], map: "user_system_roles_role_id_fkey")
   @@map("user_system_roles")
 }
 
 model OrganizationMembership {
-  id             String           @id @default(uuid()) @db.Char(36)
-  userId         String           @map("user_id") @db.Char(36)
-  organizationId String           @map("organization_id") @db.Char(36)
-  status         MembershipStatus @default(ACTIVE)
-  jobTitle       String?          @map("job_title") @db.VarChar(150)
-  isPrimary      Boolean          @default(false) @map("is_primary")
-  createdAt      DateTime         @default(now()) @map("created_at")
-  updatedAt      DateTime         @updatedAt @map("updated_at")
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  roles          MembershipRole[]
+  id                  String                    @id @default(uuid()) @db.Char(36)
+  userId              String                    @map("user_id") @db.Char(36)
+  organizationId      String                    @map("organization_id") @db.Char(36)
+  status              MembershipStatus          @default(ACTIVE)
+  jobTitle            String?                   @map("job_title") @db.VarChar(150)
+  isPrimary           Boolean                   @default(false) @map("is_primary")
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
+  roles               MembershipRole[]
+  organization        Organization              @relation(fields: [organizationId], references: [id])
+  user                User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  practitioner        Practitioner?
+  facilityAssignments StaffFacilityAssignment[]
 
   @@unique([userId, organizationId])
   @@index([organizationId, status])
@@ -153,26 +148,24 @@ model MembershipRole {
   role         Role                   @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([membershipId, roleId])
+  @@index([roleId], map: "membership_roles_role_id_fkey")
   @@map("membership_roles")
 }
 
 model UserSession {
-  id         String    @id @default(uuid()) @db.Char(36)
-  userId     String    @map("user_id") @db.Char(36)
-  expiresAt  DateTime  @map("expires_at")
-  revokedAt  DateTime? @map("revoked_at")
-  lastSeenAt DateTime  @default(now()) @map("last_seen_at")
-  ipAddress  String?   @map("ip_address") @db.VarChar(45)
-  userAgent  String?   @map("user_agent") @db.VarChar(500)
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  id                   String         @id @default(uuid()) @db.Char(36)
+  userId               String         @map("user_id") @db.Char(36)
+  expiresAt            DateTime       @map("expires_at")
+  revokedAt            DateTime?      @map("revoked_at")
+  lastSeenAt           DateTime       @default(now()) @map("last_seen_at")
+  ipAddress            String?        @map("ip_address") @db.VarChar(45)
+  userAgent            String?        @map("user_agent") @db.VarChar(500)
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
   activeOrganizationId String?
-
-  activeOrganization Organization? @relation("ActiveSessionOrganization", fields: [activeOrganizationId], references: [id], onDelete: SetNull)
-
-  refreshTokens RefreshToken[]
+  refreshTokens        RefreshToken[]
+  activeOrganization   Organization?  @relation("ActiveSessionOrganization", fields: [activeOrganizationId], references: [id])
+  user                 User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt])
   @@index([activeOrganizationId])
@@ -203,7 +196,7 @@ model SecurityEvent {
   userAgent String?           @map("user_agent") @db.VarChar(500)
   details   Json?
   createdAt DateTime          @default(now()) @map("created_at")
-  user      User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user      User?             @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([eventType, createdAt])
@@ -211,30 +204,250 @@ model SecurityEvent {
 }
 
 model Facility {
-  id             String         @id @default(uuid()) @db.Char(36)
-  organizationId String         @map("organization_id") @db.Char(36)
-  code           String         @db.VarChar(30)
-  name           String         @db.VarChar(150)
-  legalName      String?        @map("legal_name") @db.VarChar(200)
-  type           FacilityType   @default(CLINIC)
-  status         FacilityStatus @default(ACTIVE)
-  timezone       String         @default("Asia/Colombo") @db.VarChar(50)
-  phone          String?        @db.VarChar(30)
-  email          String?        @db.VarChar(254)
-  addressLine1   String?        @map("address_line_1") @db.VarChar(200)
-  addressLine2   String?        @map("address_line_2") @db.VarChar(200)
-  city           String?        @db.VarChar(100)
-  stateProvince  String?        @map("state_province") @db.VarChar(100)
-  postalCode     String?        @map("postal_code") @db.VarChar(20)
-  countryCode    String         @default("LK") @map("country_code") @db.Char(2)
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  id                String                    @id @default(uuid()) @db.Char(36)
+  organizationId    String                    @map("organization_id") @db.Char(36)
+  code              String                    @db.VarChar(30)
+  name              String                    @db.VarChar(150)
+  legalName         String?                   @map("legal_name") @db.VarChar(200)
+  type              FacilityType              @default(CLINIC)
+  status            FacilityStatus            @default(ACTIVE)
+  timezone          String                    @default("Asia/Colombo") @db.VarChar(50)
+  phone             String?                   @db.VarChar(30)
+  email             String?                   @db.VarChar(254)
+  addressLine1      String?                   @map("address_line_1") @db.VarChar(200)
+  addressLine2      String?                   @map("address_line_2") @db.VarChar(200)
+  city              String?                   @db.VarChar(100)
+  stateProvince     String?                   @map("state_province") @db.VarChar(100)
+  postalCode        String?                   @map("postal_code") @db.VarChar(20)
+  countryCode       String                    @default("LK") @map("country_code") @db.Char(2)
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  updatedAt         DateTime                  @updatedAt @map("updated_at")
+  patientFacilities PatientFacility[]
+  departments       Department[]
+  organization      Organization              @relation(fields: [organizationId], references: [id])
+  rooms             Room[]
+  staffAssignments  StaffFacilityAssignment[]
 
   @@unique([organizationId, code])
   @@index([organizationId, status])
   @@index([organizationId, name])
   @@map("facilities")
+}
+
+model Department {
+  id             String           @id @default(uuid()) @db.Char(36)
+  organizationId String           @map("organization_id") @db.Char(36)
+  facilityId     String           @map("facility_id") @db.Char(36)
+  code           String           @db.VarChar(30)
+  name           String           @db.VarChar(150)
+  description    String?          @db.VarChar(500)
+  status         DepartmentStatus @default(ACTIVE)
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  facility       Facility         @relation(fields: [facilityId], references: [id])
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  rooms          Room[]
+
+  @@unique([facilityId, code])
+  @@index([organizationId, status])
+  @@index([facilityId, status])
+  @@index([facilityId, name])
+  @@map("departments")
+}
+
+model Room {
+  id             String       @id @default(uuid()) @db.Char(36)
+  organizationId String       @map("organization_id") @db.Char(36)
+  facilityId     String       @map("facility_id") @db.Char(36)
+  departmentId   String?      @map("department_id") @db.Char(36)
+  code           String       @db.VarChar(30)
+  name           String       @db.VarChar(150)
+  type           RoomType     @default(CONSULTATION)
+  status         RoomStatus   @default(ACTIVE)
+  floor          String?      @db.VarChar(50)
+  capacity       Int          @default(1)
+  notes          String?      @db.VarChar(500)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  department     Department?  @relation(fields: [departmentId], references: [id])
+  facility       Facility     @relation(fields: [facilityId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([facilityId, code])
+  @@index([organizationId, status])
+  @@index([facilityId, status])
+  @@index([departmentId, status])
+  @@index([facilityId, name])
+  @@map("rooms")
+}
+
+model StaffFacilityAssignment {
+  id             String                 @id @default(uuid()) @db.Char(36)
+  organizationId String                 @map("organization_id") @db.Char(36)
+  facilityId     String                 @map("facility_id") @db.Char(36)
+  membershipId   String                 @map("membership_id") @db.Char(36)
+  status         StaffAssignmentStatus  @default(ACTIVE)
+  isPrimary      Boolean                @default(false) @map("is_primary")
+  assignedAt     DateTime               @default(now()) @map("assigned_at")
+  endedAt        DateTime?              @map("ended_at")
+  createdAt      DateTime               @default(now()) @map("created_at")
+  updatedAt      DateTime               @updatedAt @map("updated_at")
+  facility       Facility               @relation(fields: [facilityId], references: [id])
+  membership     OrganizationMembership @relation(fields: [membershipId], references: [id])
+  organization   Organization           @relation(fields: [organizationId], references: [id])
+
+  @@unique([facilityId, membershipId])
+  @@index([organizationId, status])
+  @@index([membershipId, status])
+  @@index([facilityId, status])
+  @@map("staff_facility_assignments")
+}
+
+model Practitioner {
+  id                          String                 @id @default(uuid()) @db.Char(36)
+  organizationId              String                 @map("organization_id") @db.Char(36)
+  membershipId                String                 @unique @map("membership_id") @db.Char(36)
+  type                        PractitionerType
+  status                      PractitionerStatus     @default(ACTIVE)
+  title                       String?                @db.VarChar(30)
+  registrationNumber          String?                @map("registration_number") @db.VarChar(100)
+  registrationAuthority       String?                @map("registration_authority") @db.VarChar(150)
+  primarySpecialty            String?                @map("primary_specialty") @db.VarChar(150)
+  consultationDurationMinutes Int                    @default(15) @map("consultation_duration_minutes")
+  createdAt                   DateTime               @default(now()) @map("created_at")
+  updatedAt                   DateTime               @updatedAt @map("updated_at")
+  membership                  OrganizationMembership @relation(fields: [membershipId], references: [id])
+  organization                Organization           @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, registrationNumber])
+  @@index([organizationId, status])
+  @@index([organizationId, type])
+  @@index([organizationId, primarySpecialty])
+  @@map("practitioners")
+}
+
+model Patient {
+  id             String @id @default(uuid()) @db.Char(36)
+  organizationId String @map("organization_id") @db.Char(36)
+
+  medicalRecordNumber String @map("medical_record_number") @db.VarChar(40)
+
+  firstName  String  @map("first_name") @db.VarChar(100)
+  middleName String? @map("middle_name") @db.VarChar(100)
+  lastName   String  @map("last_name") @db.VarChar(100)
+
+  dateOfBirth DateTime?   @map("date_of_birth") @db.Date
+  sex         PatientSex?
+
+  nationalIdType   String? @map("national_id_type") @db.VarChar(30)
+  nationalIdNumber String? @map("national_id_number") @db.VarChar(100)
+
+  phone          String? @db.VarChar(50)
+  alternatePhone String? @map("alternate_phone") @db.VarChar(50)
+  email          String? @db.VarChar(190)
+
+  addressLine1  String? @map("address_line_1") @db.VarChar(190)
+  addressLine2  String? @map("address_line_2") @db.VarChar(190)
+  city          String? @db.VarChar(100)
+  stateProvince String? @map("state_province") @db.VarChar(100)
+  postalCode    String? @map("postal_code") @db.VarChar(30)
+  country       String? @db.VarChar(100)
+
+  bloodGroup String? @map("blood_group") @db.VarChar(10)
+
+  status PatientStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  facilities        PatientFacility[]
+  emergencyContacts PatientEmergencyContact[]
+
+  @@unique([organizationId, medicalRecordNumber])
+  @@index([organizationId])
+  @@index([organizationId, firstName, lastName])
+  @@index([organizationId, phone])
+  @@index([organizationId, email])
+  @@index([organizationId, nationalIdNumber])
+  @@map("patients")
+}
+
+model PatientFacility {
+  id String @id @default(uuid()) @db.Char(36)
+
+  organizationId String @map("organization_id") @db.Char(36)
+  patientId      String @map("patient_id") @db.Char(36)
+  facilityId     String @map("facility_id") @db.Char(36)
+
+  isPrimary Boolean @default(false) @map("is_primary")
+
+  registeredAt DateTime @default(now()) @map("registered_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+
+  @@unique([patientId, facilityId])
+  @@index([organizationId])
+  @@index([organizationId, facilityId])
+  @@index([patientId])
+  @@map("patient_facilities")
+}
+
+model PatientEmergencyContact {
+  id String @id @default(uuid()) @db.Char(36)
+
+  organizationId String @map("organization_id") @db.Char(36)
+  patientId      String @map("patient_id") @db.Char(36)
+
+  name           String  @db.VarChar(150)
+  relationship   String? @db.VarChar(100)
+  phone          String  @db.VarChar(50)
+  alternatePhone String? @map("alternate_phone") @db.VarChar(50)
+
+  isPrimary Boolean @default(false) @map("is_primary")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([patientId])
+  @@map("patient_emergency_contacts")
+}
+
+model PatientNumberSequence {
+  organizationId String @id @map("organization_id") @db.Char(36)
+
+  nextValue Int @default(1) @map("next_value")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("patient_number_sequences")
+}
+
+enum OrganizationType {
+  CLINIC
+  HOSPITAL
+  LABORATORY
+  PHARMACY
+  DIAGNOSTIC_CENTER
+  OTHER
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
 }
 
 enum UserStatus {
@@ -279,4 +492,65 @@ enum FacilityStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
+}
+
+enum DepartmentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum RoomType {
+  CONSULTATION
+  TREATMENT
+  PROCEDURE
+  WARD
+  LABORATORY
+  IMAGING
+  PHARMACY
+  OFFICE
+  STORAGE
+  OTHER
+}
+
+enum RoomStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+enum StaffAssignmentStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum PractitionerType {
+  PHYSICIAN
+  DENTIST
+  NURSE
+  MIDWIFE
+  PHARMACIST
+  LAB_TECHNOLOGIST
+  RADIOGRAPHER
+  THERAPIST
+  OTHER
+}
+
+enum PractitionerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum PatientSex {
+  MALE
+  FEMALE
+  OTHER
+  UNKNOWN
+}
+
+enum PatientStatus {
+  ACTIVE
+  INACTIVE
+  DECEASED
 }
