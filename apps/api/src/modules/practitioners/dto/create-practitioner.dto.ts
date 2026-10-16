@@ -1,5 +1,6 @@
 import {
   IsEnum,
+  ValidateIf,
   IsInt,
   IsOptional,
   IsString,
@@ -20,7 +21,7 @@ export class CreatePractitionerDto {
   @IsEnum(PractitionerType)
   type!: PractitionerType;
 
-  @IsOptional()
+  @ValidateIf((_o, value: unknown) => value !== undefined)
   @IsEnum(PractitionerStatus)
   status?: PractitionerStatus;
 
@@ -44,7 +45,7 @@ export class CreatePractitionerDto {
   @MaxLength(150)
   primarySpecialty?: string;
 
-  @IsOptional()
+  @ValidateIf((_o, value: unknown) => value !== undefined)
   @IsInt()
   @Min(5)
   @Max(480)

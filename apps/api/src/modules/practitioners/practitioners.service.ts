@@ -18,6 +18,8 @@ import { PractitionersRepository } from './practitioners.repository';
 export class PractitionersService {
   constructor(private readonly repository: PractitionersRepository) {}
 
+  eligibleMembers(organizationId: string, query: QueryPractitionersDto) { return this.repository.eligibleMembers(organizationId, query.page, query.limit, query.search); }
+  facilityOptions(organizationId: string) { return this.repository.facilityOptions(organizationId); }
   async create(organizationId: string, dto: CreatePractitionerDto) {
     /*
      * Check 1:
@@ -251,6 +253,7 @@ export class PractitionersService {
   }
 
   private handleUniqueConstraint(error: unknown): void {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') throw new ConflictException('Concurrent staff change. Refresh and retry.');
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'

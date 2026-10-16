@@ -2,11 +2,14 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import type {
   FormEvent,
 } from 'react';
+import { Link } from 'react-router';
+import { allPages } from './workforce-api';
 import { apiJson } from '../api/api-client';
 import { useAuth } from '../auth/useAuth';
 
@@ -176,6 +179,13 @@ const PRACTITIONER_STATUSES: Array<{
 ];
 
 export function PractitionersPage() {
+  const { user } = useAuth();
+  if (!user?.organizationId) return <p>Select an organization to manage practitioners.</p>;
+  if (!user.permissions.includes('practitioners.read')) return <p>You do not have permission to view practitioners.</p>;
+  return <><p>Create the person's staff account first in <Link to="/administration/staff">Staff</Link>, then select their name below to add clinical details.</p><PractitionersContent key={user.organizationId} /></>;
+}
+function PractitionersContent() {
+  const listRequest = useRef(0);
   const auth = useAuth();
 
   const organizationId =
@@ -385,14 +395,10 @@ export function PractitionersPage() {
             apiJson<
               CollectionResponse<Facility>
             >(
-              `/organizations/${organizationId}/facilities?page=1&limit=100`,
+              `/organizations/${organizationId}/practitioners/facility-options`,
             ),
 
-            apiJson<
-              CollectionResponse<OrganizationMembership>
-            >(
-              `/organizations/${organizationId}/memberships?status=ACTIVE&page=1&limit=100`,
-            ),
+            allPages<OrganizationMembership>(`/organizations/${organizationId}/practitioners/eligible-members`),
           ]);
 
           setFacilities(
@@ -438,7 +444,9 @@ export function PractitionersPage() {
   const loadPractitioners =
     useCallback(
       async (): Promise<void> => {
+        const requestId = ++listRequest.current;
         if (!organizationId) {
+          if (requestId !== listRequest.current) return;
           setPractitioners([]);
 
           setMeta({
@@ -500,6 +508,7 @@ export function PractitionersPage() {
               `/organizations/${organizationId}/practitioners?${query.toString()}`,
             );
 
+          if (requestId !== listRequest.current) return;
           if (
             Array.isArray(response)
           ) {
@@ -532,6 +541,7 @@ export function PractitionersPage() {
         } catch (
           requestError: unknown
         ) {
+          if (requestId !== listRequest.current) return;
           setPractitioners([]);
 
           setMeta({
@@ -548,9 +558,7 @@ export function PractitionersPage() {
             ),
           );
         } finally {
-          setPractitionersLoading(
-            false,
-          );
+          if (requestId === listRequest.current) setPractitionersLoading(false);
         }
       },
       [
@@ -686,7 +694,7 @@ export function PractitionersPage() {
         !membershipId
       ) {
         setFormError(
-          'Select an organization membership.',
+          'Select an staff member.',
         );
 
         return;
@@ -814,6 +822,7 @@ export function PractitionersPage() {
         }
 
         resetForm();
+        await loadDependencies();
 
         if (
           !editingPractitionerId &&
@@ -931,7 +940,7 @@ export function PractitionersPage() {
               <p>
                 {editingPractitioner
                   ? 'Update the selected practitioner profile.'
-                  : 'Create a clinical profile for an active organization membership.'}
+                  : 'Create a clinical profile for an active staff member.'}
               </p>
             </div>
           </div>
@@ -954,7 +963,7 @@ export function PractitionersPage() {
             <div className="form-grid">
               <label htmlFor="practitioner-membership">
                 <span>
-                  Organization member
+                  Staff member
                 </span>
 
                 <select
@@ -981,7 +990,7 @@ export function PractitionersPage() {
                       ? 'Loading members…'
                       : availableMemberships.length ===
                           0
-                        ? 'No eligible members'
+                        ? 'No eligible staff — create one in Staff first'
                         : 'Select member'}
                   </option>
 

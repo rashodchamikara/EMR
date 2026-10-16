@@ -1,5 +1,6 @@
 import {
   IsEnum,
+  ValidateIf,
   IsInt,
   IsOptional,
   IsString,
@@ -13,11 +14,11 @@ import {
 } from '../../../generated/prisma/client';
 
 export class UpdatePractitionerDto {
-  @IsOptional()
+  @ValidateIf((_o, value: unknown) => value !== undefined)
   @IsEnum(PractitionerType)
   type?: PractitionerType;
 
-  @IsOptional()
+  @ValidateIf((_o, value: unknown) => value !== undefined)
   @IsEnum(PractitionerStatus)
   status?: PractitionerStatus;
 
@@ -41,7 +42,7 @@ export class UpdatePractitionerDto {
   @MaxLength(150)
   primarySpecialty?: string | null;
 
-  @IsOptional()
+  @ValidateIf((_o, value: unknown) => value !== undefined)
   @IsInt()
   @Min(5)
   @Max(480)

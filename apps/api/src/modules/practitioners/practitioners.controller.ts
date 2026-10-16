@@ -64,6 +64,13 @@ export class PractitionersController {
     return this.practitionersService.findMany(organizationId, query);
   }
 
+  @Get('eligible-members')
+  @RequirePermissions('practitioners.read')
+  eligible(@Param('organizationId', ParseUUIDPipe) org: string, @Query() query: QueryPractitionersDto) { return this.practitionersService.eligibleMembers(org, query); }
+  @Get('facility-options')
+  @RequirePermissions('practitioners.read')
+  facilities(@Param('organizationId', ParseUUIDPipe) org: string) { return this.practitionersService.facilityOptions(org); }
+
   @Get(':practitionerId')
   @RequirePermissions('practitioners.read')
   @ApiOperation({

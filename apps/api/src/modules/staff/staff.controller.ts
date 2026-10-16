@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   ParseUUIDPipe,
   Post,
   UseGuards,
@@ -12,6 +13,7 @@ import { RequirePermissions } from '../auth/decorators/require-permissions.decor
 import { OrganizationContextGuard } from '../auth/guards/organization-context.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { AssignStaffDto } from './dto/assign-staff.dto';
+import { UpdateStaffAssignmentDto } from './dto/update-staff-assignment.dto';
 import { StaffService } from './staff.service';
 
 @ApiTags('Staff')
@@ -47,4 +49,13 @@ export class StaffController {
   ) {
     return this.staffService.assign(organizationId, facilityId, dto);
   }
+
+  @Patch(':assignmentId')
+  @RequirePermissions('staff.update')
+  update(
+    @Param('organizationId', ParseUUIDPipe) org: string,
+    @Param('facilityId', ParseUUIDPipe) facility: string,
+    @Param('assignmentId', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateStaffAssignmentDto,
+  ) { return this.staffService.updateAssignment(org, facility, id, dto); }
 }

@@ -1,10 +1,10 @@
-import { IsBoolean, IsOptional, IsUUID } from 'class-validator';
+import { IsBoolean, ValidateIf, IsUUID } from 'class-validator';
 
 export class AssignStaffDto {
   @IsUUID()
   membershipId!: string;
 
-  @IsOptional()
+  @ValidateIf((_o, value: unknown) => value !== undefined)
   @IsBoolean()
   isPrimary?: boolean;
 }

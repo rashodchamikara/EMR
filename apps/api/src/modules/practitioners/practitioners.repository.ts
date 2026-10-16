@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   MembershipStatus,
   PractitionerStatus,
@@ -219,7 +219,7 @@ export class PractitionersRepository {
         : {}),
     };
 
-    return this.prisma.practitioner.findMany({
+    return this.prisma.$transaction([this.prisma.practitioner.findMany({
       where,
       include: practitionerInclude,
       orderBy: {
@@ -227,7 +227,7 @@ export class PractitionersRepository {
       },
       skip,
       take: options.limit,
-    });
+    }), this.prisma.practitioner.count({ where })], { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead }).then(([data, total]) => ({ data, meta: { page: options.page, limit: options.limit, total, totalPages: Math.ceil(total / options.limit) } }));
   }
 
   count(organizationId: string) {
@@ -239,19 +239,29 @@ export class PractitionersRepository {
   }
 
   create(data: Prisma.PractitionerUncheckedCreateInput) {
-    return this.prisma.practitioner.create({
-      data,
-      include: practitionerInclude,
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const member = await tx.organizationMembership.findFirst({ where: { id: data.membershipId, organizationId: data.organizationId, status: 'ACTIVE', user: { status: 'ACTIVE' }, organization: { status: 'ACTIVE' } }, select: { id: true } });
+      if (!member) throw new BadRequestException('An active staff account and organization membership are required.');
+      return tx.practitioner.create({ data, include: practitionerInclude });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
   update(practitionerId: string, data: Prisma.PractitionerUpdateInput) {
-    return this.prisma.practitioner.update({
-      where: {
-        id: practitionerId,
-      },
-      data,
-      include: practitionerInclude,
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.practitioner.findUniqueOrThrow({ where: { id: practitionerId }, include: { membership: { include: { user: { select: { status: true } } } } } });
+      const nextStatus = typeof data.status === 'string' ? data.status : current.status;
+      if (nextStatus === 'ACTIVE' && (current.membership.status !== 'ACTIVE' || current.membership.user.status !== 'ACTIVE')) throw new BadRequestException('Reactivate the staff membership/account before activating this practitioner.');
+      return tx.practitioner.update({ where: { id: practitionerId }, data, include: practitionerInclude });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
+
+  async eligibleMembers(organizationId: string, page: number, limit: number, search?: string) {
+    const where: Prisma.OrganizationMembershipWhereInput = { organizationId, status: 'ACTIVE', practitioner: { is: null }, user: { is: { status: 'ACTIVE', ...(search ? { OR: [{ firstName: { contains: search } }, { lastName: { contains: search } }, { email: { contains: search } }] } : {}) } } };
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.organizationMembership.findMany({ where, include: practitionerMembershipInclude, skip: (page - 1) * limit, take: limit, orderBy: { id: 'asc' } }),
+      this.prisma.organizationMembership.count({ where }),
+    ]);
+    return { data, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+  }
+  facilityOptions(organizationId: string) { return this.prisma.facility.findMany({ where: { organizationId }, select: { id: true, name: true, code: true, status: true }, orderBy: { name: 'asc' } }); }
 }

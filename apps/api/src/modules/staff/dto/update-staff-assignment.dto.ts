@@ -1,12 +1,12 @@
-import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
+import { IsBoolean, IsEnum, ValidateIf } from 'class-validator';
 import { StaffAssignmentStatus } from '../../../generated/prisma/client';
 
 export class UpdateStaffAssignmentDto {
-  @IsOptional()
+  @ValidateIf((_o, value: unknown) => value !== undefined)
   @IsEnum(StaffAssignmentStatus)
   status?: StaffAssignmentStatus;
 
-  @IsOptional()
+  @ValidateIf((_o, value: unknown) => value !== undefined)
   @IsBoolean()
   isPrimary?: boolean;
 }

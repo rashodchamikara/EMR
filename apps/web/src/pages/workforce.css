@@ -1,0 +1,11 @@
+.workforce { background:#fff; border:1px solid #dce5eb; border-radius:14px; padding:24px; margin-bottom:28px; color:#203a4a; }
+.workforce header,.workforce footer { display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; margin:16px 0; }
+.workforce h1 { margin:0 0 8px; font-size:27px; }.workforce h2 { font-size:21px; }.workforce p { line-height:1.6; }
+.workforce label { display:flex; flex-direction:column; gap:7px; font-size:13px; font-weight:600; }
+.workforce input,.workforce select { border:1px solid #b9cbd5; border-radius:7px; padding:10px; font:inherit; background:#fff; color:#203a4a; min-width:0; }
+.workforce button { padding:10px 15px; border:1px solid #176b82; border-radius:7px; background:#176b82; color:white; font:inherit; cursor:pointer; }.workforce button.secondary { background:#fff; color:#205269; border-color:#b9cbd5; }.workforce button:disabled { opacity:.5; cursor:not-allowed; }
+.workforce input:focus,.workforce select:focus,.workforce button:focus-visible { outline:3px solid #b6dfed; outline-offset:2px; }
+.workforce .wf-actions { display:flex; flex-wrap:wrap; gap:12px; align-items:end; }.wf-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }.workforce .wf-check { flex-direction:row; align-items:center; font-weight:400; }.wf-check input { width:17px; height:17px; }
+.wf-form { margin:22px 0; background:#f5f9fb; border:1px solid #dce5eb; border-radius:10px; padding:20px; }.wf-form fieldset { border:0; padding:0; min-width:0; }.wf-error { background:#fff1ef; color:#8e2929; padding:14px; border-radius:7px; }.wf-success { background:#edf9f2; color:#22603d; padding:14px; border-radius:7px; }
+.wf-table { overflow:auto; margin-top:20px; }.workforce table { width:100%; border-collapse:collapse; }.workforce td,.workforce th { text-align:left; padding:14px 12px; border-bottom:1px solid #e1e9ef; font-size:13px; }.workforce th { background:#f5f9fb; }.workforce small { color:#536e80; }.workforce a { color:#176b82; }
+@media(max-width:800px){.wf-grid{grid-template-columns:1fr 1fr;}}@media(max-width:550px){.wf-grid{grid-template-columns:1fr;}.workforce{padding:14px;}}
